@@ -77,6 +77,26 @@ class Board:
     def copy(self):
         return Board(self.size,copy_other=self)
 
+    def copy_masked(self, mask):
+        copy = Board(self.size)
+        copy.pla = self.pla
+
+        for loc in range(len(self.board)):
+            if not self.is_on_board(loc):
+                continue
+            if loc in mask:
+                copy.add_unsafe(self.board[loc],loc)
+        return copy
+
+    def get_stone_locs(self):
+        locs = []
+        for loc in range(self.arrsize):
+            if not self.is_on_board(loc):
+                continue
+            if self.board[loc] == Board.BLACK or self.board[loc] == Board.WHITE:
+                locs.append(loc)
+        return locs
+
     @staticmethod
     def get_opp(pla):
         return 3-pla
