@@ -26,6 +26,8 @@ from model_pytorch import Model, EXTRA_SCORE_DISTR_RADIUS, ExtraOutputs
 from data_processing_pytorch import apply_symmetry
 from load_model import load_model
 
+import shapley
+
 description = """
 Play go with a trained neural net!
 Implements a basic GTP engine that uses the neural net directly to play moves.
@@ -251,6 +253,12 @@ def get_gfx_commands_for_heatmap(locs_and_values, board, normalization_div, is_p
     gfx_commands.append("TEXT " + ", ".join(texts_value + texts_rev + texts))
     return gfx_commands
 
+def get_gfx_commands_for_labels(locs_and_values, board):
+    gfx_commands = []
+    for (l, v) in locs_and_values:
+        gfx_commands.append(f"LABEL {str_coord(l, board)} {v:.2f}")
+    return gfx_commands
+
 def print_scorebelief(gs,outputs):
     board = gs.board
     scorebelief = outputs["scorebelief"]
@@ -379,6 +387,8 @@ known_analyze_commands = [
     'gfx/Seki2/seki2',
     'gfx/ScoreBelief/scorebelief',
     'gfx/PassAlive/passalive',
+    'gfx/Shapley/shapley',
+    'gfx/ShapleyDiff/shapley_diff %P',
 ]
 
 board_size = 19
@@ -637,6 +647,18 @@ while True:
     elif command[0] == "quit":
         print('=%s \n\n' % (cmdid,), end='')
         break
+    elif command[0] == "shapley":
+        locs_and_values = shapley.explain_lead(model, gs.board).items()
+        gfx_commands = get_gfx_commands_for_heatmap(locs_and_values, gs.board, normalization_div="max", is_percent=False)
+        gfx_commands += get_gfx_commands_for_labels(locs_and_values, gs.board)
+        ret = "\n".join(gfx_commands)
+    elif command[0] == "shapley_diff":
+        loc1 = parse_coord(command[1], gs.board)
+        loc2 = parse_coord(command[2], gs.board)
+        locs_and_values = shapley.explain_diff(model,gs.board,loc1,loc2).items()
+        gfx_commands = get_gfx_commands_for_heatmap(locs_and_values, gs.board, normalization_div="max", is_percent=False)
+        gfx_commands += get_gfx_commands_for_labels(locs_and_values, gs.board)
+        ret = "\n".join(gfx_commands)
     else:
         print('Warning: Ignoring unknown command - %s' % (line,), file=sys.stderr)
         ret = None
